@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapping Crime in Boston</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- HERO -->
+<header class="hero">
+  <h1>Mapping Crime in Boston: A Spatial and Temporal Analysis</h1>
+  <p class="subtitle">How Do Crime Hotspots, Offense Types, and Time Patterns Shape Violent Crime in Boston?</p>
+  <p class="authors">Kaiyang Weng &middot; Ayaan Imtiaz &middot; Nevan Sehgal</p>
+</header>
+
+<!-- INTRODUCTION -->
+<div class="section">
+  <h2>Introduction</h2>
+  <p>Crime is one of the most pressing concerns in urban communities, and understanding where and when it occurs is essential for effective prevention and resource allocation. Boston, as one of the oldest and most densely populated cities in the United States, presents a compelling case study for examining patterns in criminal activity.</p>
+  <p>With publicly available incident report data from the Boston Police Department, it is now possible to analyze tens of thousands of records to uncover trends that might otherwise go unnoticed. This project explores the spatial and temporal dynamics of crime across Boston's neighborhoods by examining factors such as the time of day incidents occur, which districts experience the highest concentrations of offenses, and what types of crimes are most prevalent in specific areas.</p>
+  <p>By visualizing these patterns through static and interactive charts, we hope to provide insights that could inform community awareness and contribute to a safer city. Understanding crime at a location-based level is not only academically valuable, but also practically important for residents, policymakers, and law enforcement agencies seeking data-driven approaches to public safety.</p>
+  <div class="bias-note">
+    <strong>A note on data bias:</strong> This dataset only represents <em>identified and reported</em> crimes. Many crimes go unreported, and there are well-documented disparities in reporting rates across neighborhoods, demographics, and crime types. The patterns shown here reflect police incident reports, not the full picture of crime in Boston. This analysis focuses on <em>actual criminal offenses</em> and excludes administrative police activities such as sick assists, investigations, and towed vehicles.
+  </div>
+</div>
+
+<!-- DATA INTRO -->
+<div class="section">
+  <h2>About the Data</h2>
+  <p>This dataset is sourced from the <a href="https://data.boston.gov/dataset/crime-incident-reports-august-2015-to-date-source-new-system" target="_blank">Boston Open Data Hub</a>, maintained by the Boston Police Department. It records police incident reports from August 2015 to the present, documenting the where and when of various types of offenses across the city. The original dataset contains approximately 436,666 observations and 17 columns. We use a 10,000-row subset while maintaining all 17 original columns, including DISTRICT, OCCURRED_ON_DATE, YEAR, MONTH, Lat, Long, and Location.</p>
+  <table class="data-table">
+    <thead><tr><th>Attribute</th><th>Description</th><th>Type</th></tr></thead>
+    <tbody>
+      <tr><td>INCIDENT_NUMBER</td><td>Unique identifier for each report</td><td>Integer</td></tr>
+      <tr><td>OFFENSE_CODE / OFFENSE_CODE_GROUP</td><td>Numeric and group offense classification</td><td>Integer / Categorical</td></tr>
+      <tr><td>OFFENSE_DESCRIPTION</td><td>Human-readable crime description</td><td>Categorical</td></tr>
+      <tr><td>DISTRICT</td><td>Boston police district code</td><td>Categorical</td></tr>
+      <tr><td>REPORTING_AREA</td><td>Reporting area code</td><td>Categorical</td></tr>
+      <tr><td>SHOOTING</td><td>Whether a shooting was involved (0/1)</td><td>Binary</td></tr>
+      <tr><td>OCCURRED_ON_DATE</td><td>Date and time of incident</td><td>Datetime</td></tr>
+      <tr><td>YEAR / MONTH / HOUR</td><td>Temporal breakdown</td><td>Integer</td></tr>
+      <tr><td>DAY_OF_WEEK</td><td>Day the incident occurred</td><td>Categorical</td></tr>
+      <tr><td>UCR_PART</td><td>Uniform Crime Reporting classification</td><td>Categorical</td></tr>
+      <tr><td>STREET</td><td>Street where incident occurred</td><td>Categorical</td></tr>
+      <tr><td>Lat / Long / Location</td><td>Geographic coordinates</td><td>Continuous</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- VIZ 1: HEATMAP (Altair / Vega-Lite) -->
+<div class="section">
+  <h2>Visualizations</h2>
+  <p style="font-size:0.95em;color:#415a77;margin-bottom:24px;">Visualizations are organized from temporal patterns (when), to spatial distribution (where), to categorical breakdown (what). Crime categories are filtered to include only actual criminal offenses.</p>
+
+  <div class="viz-block">
+    <h3>1. Boston Crime Frequency by Day of Week and Hour (Altair)</h3>
+    <p class="viz-desc">This heatmap shows crime frequency across days and hours for actual criminal offenses. Hover over any cell to see the exact crime count. Midnight (hour 0) is excluded per instructor feedback.</p>
+    <div id="viz-heatmap"></div>
+    <div class="takeaway"><strong>Takeaway:</strong> Crime activity peaks during late afternoon and evening hours (3 PM–8 PM) across all days. Fridays and Saturdays show the highest overall activity. Early morning hours (1–5 AM) are consistently quieter. This pattern suggests crime correlates with when people are out and about in the city.</div>
+  </div>
+
+  <!-- VIZ 2: MONTHLY TREND with crime type breakdown -->
+  <div class="viz-block">
+    <h3>2. Monthly Crime Trends with Type Breakdown (D3)</h3>
+    <p class="viz-desc">Area chart showing crime volume per month. Click and drag on the chart to brush-select a time range — a crime type breakdown chart will appear below. Hover over dots to see exact monthly counts.</p>
+    <div id="viz-monthly"></div>
+    <div id="monthly-summary" style="margin-top:12px;font-size:0.93em;color:#415a77;"></div>
+    <div id="monthly-type-chart"></div>
+    <div class="takeaway"><strong>Takeaway:</strong> Crime incidents show a seasonal pattern with higher activity in summer months (June–August) and lower volumes in winter (January–February). This aligns with established criminological research on the relationship between warmer weather and crime rates. Use the brush to see how crime type composition shifts by season.</div>
+  </div>
+
+  <!-- VIZ 3: GEO MAP with real Leaflet basemap -->
+  <div class="viz-block">
+    <h3>3. Geographic Distribution of Crime Incidents — Real Boston Map (Leaflet)</h3>
+    <p class="viz-desc">Each dot represents a crime incident plotted on a real Boston street map (OpenStreetMap). Use the dropdowns to filter by district or crime category, or toggle to show only shooting incidents. Dots are color-coded by crime category. Scroll to zoom; drag to pan. Hover over dots for details.</p>
+    <div class="controls">
+      <label for="geo-district">District:</label>
+      <select id="geo-district"><option value="All">All Districts</option></select>
+      <label for="geo-crime-cat" style="margin-left:8px;">Crime Category:</label>
+      <select id="geo-crime-cat"><option value="All">All Categories</option></select>
+      <button id="geo-shooting" onclick="toggleShooting()">Show Shootings Only</button>
+    </div>
+    <div id="viz-geomap" style="height:500px;border-radius:8px;border:1px solid #ddd;overflow:hidden;"></div>
+    <div class="geo-legend" id="geo-legend" style="margin-top:10px;"></div>
+    <div class="takeaway"><strong>Takeaway:</strong> Crime incidents cluster in downtown Boston (A1/D4), Roxbury (B2), and Dorchester (C11/B3). Shooting incidents are concentrated along Blue Hill Ave and in the B2/B3 districts. The real street map reveals that high-crime corridors follow major commercial arteries. This aligns with Braga, Papachristos, and Hureau's (2010) finding that gun violence in Boston is heavily concentrated at specific micro-locations.</div>
+  </div>
+
+  <!-- VIZ 4: DISTRICT INTERACTIVE BAR -->
+  <div class="viz-block">
+    <h3>4. Top 10 Districts by Crime Type — Interactive (D3)</h3>
+    <div class="controls" id="district-type-controls" style="flex-wrap:wrap;gap:6px;"></div>
+    <div id="viz-districts" style="margin-top:16px;"></div>
+    <div class="takeaway"><strong>Takeaway:</strong> Districts D4, B2, A1, C11, and B3 are the top crime districts overall. Selecting specific crime types reveals distinct patterns: D4 leads in property crimes and larceny, while B2/B3 lead in violent offenses including assault and robbery. Click the buttons above to compare.</div>
+  </div>
+
+  <!-- VIZ 5: STREET INTERACTIVE BAR -->
+  <div class="viz-block">
+    <h3>5. Top 10 Streets by Crime Type — Interactive (D3)</h3>
+    <div class="controls" id="street-type-controls" style="flex-wrap:wrap;gap:6px;"></div>
+    <div id="viz-streets" style="margin-top:16px;"></div>
+    <div class="takeaway"><strong>Takeaway:</strong> Washington St dominates overall crime volume. Motor vehicle incidents and larceny cluster on commercial streets, while Blue Hill Ave and Harrison Ave see higher proportions of violent offenses. Changing crime type reveals dramatically different street-level hotspots — robbery concentrates downtown while auto theft spreads across residential corridors.</div>
+  </div>
+</div>
+
+<!-- CONCLUSION -->
+<div class="section">
+  <h2>Conclusion</h2>
+  <p>Through this visualization analysis, we explored Boston crime data across spatial, temporal, and categorical dimensions. Our key findings include:</p>
+  <p><strong>1. Crime is highly concentrated in space and time.</strong> A small number of districts (D4, B2, A1, C11) and streets (Washington St, Blue Hill Ave) account for a disproportionate share of incidents. Crime peaks in late afternoon/evening hours and on weekends. This supports Weisburd's (2015) "law of crime concentration" at micro-geographic levels.</p>
+  <p><strong>2. Crime types vary significantly by location.</strong> High-traffic commercial areas see more property crimes and motor vehicle incidents, while residential corridors experience higher rates of violent offenses including shootings.</p>
+  <p><strong>3. Seasonal patterns are clearly visible.</strong> Summer months consistently show higher crime volumes, suggesting opportunities for targeted seasonal public safety interventions.</p>
+
+  <h2 style="margin-top:40px;">Future Work</h2>
+  <p>This analysis is limited to a 10,000-row sample primarily from 2023. Future work could expand to the full dataset for multi-year trend analysis, incorporate demographic data (race, gender, income) to examine equity dimensions of crime distribution, overlay university campus boundaries to study campus-area crime patterns, and add population-normalized crime rates per district for fairer comparisons. A time-series analysis accounting for seasonal fluctuations would also be more informative.</p>
+
+  <h2 style="margin-top:40px;">References</h2>
+  <ul class="references">
+    <li>Braga, A. A., Papachristos, A. V., &amp; Hureau, D. M. (2010). <em>The Concentration and Stability of Gun Violence at Micro Places in Boston, 1980–2008.</em> Journal of Quantitative Criminology, 26(1), 33–53. <a href="https://doi.org/10.1007/s10940-009-9082-x" target="_blank">DOI Link</a></li>
+    <li>Weisburd, D. (2015). <em>The Law of Crime Concentration and the Criminology of Place.</em> Criminology, 53(2), 133–157. <a href="https://doi.org/10.1111/1745-9125.12070" target="_blank">DOI Link</a></li>
+    <li>Boston Police Department. <em>Crime Incident Reports (August 2015 to Date).</em> <a href="https://data.boston.gov/dataset/crime-incident-reports-august-2015-to-date-source-new-system" target="_blank">Boston Open Data Hub</a></li>
+  </ul>
+</div>
+
+<footer class="footer">
+  DS4200 — Information Presentation and Data Visualization — Northeastern University<br>
+  Kaiyang Weng &middot; Ayaan Imtiaz &middot; Nevan Sehgal
+</footer>
+
+<script src="app.js"></script>
+
+</body>
+</html>
